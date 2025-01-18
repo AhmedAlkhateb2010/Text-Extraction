@@ -14,9 +14,9 @@ pytesseract.pytesseract.tesseract_cmd = r'C:\Users\Msi\Desktop\Text Extraction\t
 # Blueprint setup
 main = Blueprint('main', __name__)
 
-
 # Allowed file extensions (image and PDF)
 ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'webp', 'heif', 'heic', 'raw', 'cr2', 'nef', 'dng', 'svg', 'eps', 'ai', 'ico', 'pdf'}
+
 UPLOAD_FOLDER = r'C:\Users\Msi\Desktop\Text Extraction\app\uploads'
 
 def allowed_file(filename):
@@ -64,12 +64,26 @@ def upload_file():
         character_count_column = []
         coordinates_column = []
 
-        for line_text, coordinates in extracted_data:
+        # Group words by line
+        grouped_lines = group_words_by_line(extracted_data)
+
+        # Iterate over each grouped line
+        for line in grouped_lines:
+            line_text = " ".join([word[0] for word in line])  # Combine words into a line
+            language = safe_detect(line_text)  # Detect the language of the entire line
+            word_count = len(line)  # Number of words in the line
+            character_count = sum(len(word[0]) for word in line)  # Total character count in the line
+            
+            # Coordinates: Let's use the first word's X, Y coordinates for simplicity
+            x, y = line[0][1]  # Use the coordinates of the first word in the line
+            coordinates = f"X: {x}, Y: {y}"
+            
+            # Append the data for this line
             text_column.append(line_text)
-            language_column.append(safe_detect(line_text))
-            word_count_column.append(len(line_text.split()))
-            character_count_column.append(len(line_text))
-            coordinates_column.append(f"({coordinates[0]}, {coordinates[1]})")
+            language_column.append(language)
+            word_count_column.append(word_count)
+            character_count_column.append(character_count)
+            coordinates_column.append(coordinates)
 
         # Create an Excel file
         output_filename = f"{os.path.splitext(filename)[0]}_extracted.xlsx"
@@ -105,8 +119,41 @@ def extract_text_from_image(image_path):
             extracted_data.append((text, (x, y)))
     return extracted_data
 
+def group_words_by_line(extracted_data, x_threshold=100):
+    """Group words by line based on their Y coordinate and a horizontal distance threshold for X coordinates."""
+    grouped_lines = []
+    current_line = []
+    current_line_top = None
+    current_line_left = None
+    
+    for word, coordinates in extracted_data:
+        x, y = coordinates
+        
+        if current_line_top is None:  # Start a new line with the first word
+            current_line.append((word, (x, y)))
+            current_line_top = y
+            current_line_left = x
+        elif abs(y - current_line_top) < 10 and (x - current_line_left) < x_threshold:
+            # If the word is on the same line and close enough horizontally
+            current_line.append((word, (x, y)))
+            current_line_left = x  # Update the farthest word's X coordinate on this line
+        else:
+            # Otherwise, the word is on a new line
+            grouped_lines.append(current_line)
+            current_line = [(word, (x, y))]
+            current_line_top = y
+            current_line_left = x  # Reset to the new word's X position
+    
+    # Add the last line if any
+    if current_line:
+        grouped_lines.append(current_line)
+    
+    return grouped_lines
+
 def safe_detect(text):
     """Safely detect the language of a given text."""
+    if text.strip().isnumeric():  # Check if the text is numeric
+        return "Number"
     if not text.strip():
         return "Unknown"
     try:
