@@ -8,19 +8,48 @@
 </head>
 <body>
     <div class="container">
-        <h1>Upload an Image for Text Extraction</h1>
+        <h1>Upload an Image or PDF for Text Extraction</h1>
 
-        <!-- Single form for file upload -->
-        <form action="/upload" method="POST" enctype="multipart/form-data">
-            <input type="file" name="file" accept="image/*" required>
-            <button type="submit">Upload</button>
+        <!-- Upload Form -->
+        <form id="upload-form" method="POST" action="/upload" enctype="multipart/form-data">
+            <label for="file">Choose file:</label>
+            <input type="file" id="file" name="file" accept="image/*,application/pdf" required>
+            <button type="submit" id="convert-button">Convert to Text</button>
         </form>
 
-        <div id="output">
-            {% if download_link %}
-                <p>File successfully uploaded. <a href="{{ download_link }}" download>Download the extracted text</a></p>
+        <!-- Error or Success Message -->
+        <div id="message">
+            {% if error %}
+                <p style="color: red;">{{ error }}</p>
             {% endif %}
         </div>
+
+        <!-- Download Section -->
+        {% if download_link %}
+        <div id="download-section">
+            <p>File processed successfully! You can download it now:</p>
+            <a href="{{ download_link }}" id="download-now-button" download>Download Now</a>
+        </div>
+
+        <!-- Auto-Trigger Download -->
+        <script type="text/javascript">
+            window.onload = function() {
+                var downloadLink = document.getElementById("download-now-button");
+                if (downloadLink) {
+                    downloadLink.click(); // Automatically trigger the download
+                }
+            };
+        </script>
+        {% endif %}
     </div>
+
+    <!-- Loading Spinner -->
+    <script type="text/javascript">
+        document.getElementById("upload-form").onsubmit = function() {
+            var convertButton = document.getElementById("convert-button");
+            convertButton.innerText = "Processing...";
+            convertButton.disabled = true; // Disable the button to prevent duplicate submissions
+        };
+    </script>
 </body>
 </html>

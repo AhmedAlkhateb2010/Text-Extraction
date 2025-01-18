@@ -1,58 +1,61 @@
-from flask import Blueprint, request, jsonify, send_from_directory, render_template, url_for
+from flask import Blueprint, request, render_template, jsonify, url_for, send_from_directory
 from werkzeug.utils import secure_filename
 import os
 import pytesseract
 from PIL import Image
 from langdetect import detect, LangDetectException
 import pandas as pd
+from pdf2image import convert_from_path
 
-# Update to your local Tesseract installation path
+# Tesseract setup (update this to your local installation path)
 pytesseract.pytesseract.tesseract_cmd = r'C:\Users\Msi\Desktop\Text Extraction\tesseract OCR\tesseract.exe'
 
 # Blueprint setup
 main = Blueprint('main', __name__)
 
-# Allowed file extensions
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+# Allowed file extensions (image and PDF)
+ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'webp', 'heif', 'heic', 'raw', 'cr2', 'nef', 'dng', 'svg', 'eps', 'ai', 'ico', 'pdf'}
+UPLOAD_FOLDER = r'C:\Users\Msi\Desktop\Text Extraction\app\uploads'
 
 def allowed_file(filename):
+    """Check if the file extension is allowed."""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-# Route for the index page (upload form)
-@main.route('/')
+@main.route('/', methods=['GET'])
 def index():
-    return render_template('index.html')  # Just the filename
+    """Render the index page."""
+    return render_template('index.html')
 
-
-# Route for file upload (POST method)
 @main.route('/upload', methods=['POST'])
 def upload_file():
+    """Handle file uploads and process them."""
     if 'file' not in request.files:
-        return jsonify({"error": "No file part"}), 400
-    
+        return render_template('index.html', error="No file selected")
+
     file = request.files['file']
     if file.filename == '':
-        return jsonify({"error": "No selected file"}), 400
-    
+        return render_template('index.html', error="No file selected")
+
     if file and allowed_file(file.filename):
+        # Save the uploaded file
         filename = secure_filename(file.filename)
-        file_path = os.path.join(r'C:\Users\Msi\Desktop\Text Extraction\app\uploads', filename)  # Raw string for file path
+        file_path = os.path.join(UPLOAD_FOLDER, filename)
         file.save(file_path)
 
-        # Open the image for text extraction
-        img = Image.open(file_path)
+        # Process the file
+        if filename.lower().endswith('.pdf'):
+            # Convert PDF to images and extract text from each page
+            pages = convert_from_path(file_path, 300)
+            extracted_data = []
+            for page_number, page in enumerate(pages):
+                page_path = f"{file_path}_page_{page_number + 1}.jpg"
+                page.save(page_path, 'JPEG')
+                extracted_data.extend(extract_text_from_image(page_path))
+        else:
+            # Extract text from the image file directly
+            extracted_data = extract_text_from_image(file_path)
 
-        # Extract text and coordinates with pytesseract
-        d = pytesseract.image_to_data(img, output_type=pytesseract.Output.DICT)
-        extracted_data = []
-        for i in range(len(d['text'])):
-            text = d['text'][i]
-            if text.strip():  # Ignore empty strings
-                x = d['left'][i]
-                y = d['top'][i]
-                extracted_data.append((text, (x, y)))
-        
-        # Prepare data for Excel creation
+        # Prepare extracted data for Excel
         text_column = []
         language_column = []
         word_count_column = []
@@ -61,16 +64,14 @@ def upload_file():
 
         for line_text, coordinates in extracted_data:
             text_column.append(line_text)
-            language_column.append(safe_detect(line_text))  # Detect language using safe_detect
-            word_count_column.append(len(line_text.split()))  # Word count
-            character_count_column.append(len(line_text))  # Character count
-            coordinates_column.append(f"({coordinates[0]}, {coordinates[1]})")  # Coordinates
-        
-        # Create an Excel file with the extracted data
-        output_filename = f"{os.path.splitext(filename)[0]}_extracted.xlsx"
-        output_filepath = os.path.join(r'C:\Users\Msi\Desktop\Text Extraction\app\uploads', output_filename)  # Raw string for file path
+            language_column.append(safe_detect(line_text))
+            word_count_column.append(len(line_text.split()))
+            character_count_column.append(len(line_text))
+            coordinates_column.append(f"({coordinates[0]}, {coordinates[1]})")
 
-        # Create a DataFrame for the extracted data
+        # Create an Excel file
+        output_filename = f"{os.path.splitext(filename)[0]}_extracted.xlsx"
+        output_filepath = os.path.join(UPLOAD_FOLDER, output_filename)
         df = pd.DataFrame({
             "Text": text_column,
             "Language": language_column,
@@ -78,29 +79,35 @@ def upload_file():
             "Character Count": character_count_column,
             "Coordinates": coordinates_column
         })
-        
-        # Write the DataFrame to Excel
         df.to_excel(output_filepath, index=False, engine='openpyxl')
 
-        # Return a downloadable link for the Excel file
-        return jsonify({
-            "message": "File successfully uploaded and processed",
-            "download_link": url_for('main.download_file', filename=os.path.basename(output_filepath))
-        })
+        # Return a download link to the processed file
+        return render_template('index.html', download_link=url_for('main.download_file', filename=output_filename))
 
-    else:
-        return jsonify({"error": "Invalid file type"}), 400
+    return render_template('index.html', error="Invalid file type")
 
-# Route for downloading the processed Excel file
 @main.route('/uploads/<filename>', methods=['GET'])
 def download_file(filename):
-    return send_from_directory(r'C:\Users\Msi\Desktop\Text Extraction\app\uploads', filename, as_attachment=True)  # Raw string for file path
+    """Serve the processed file for download."""
+    return send_from_directory(UPLOAD_FOLDER, filename, as_attachment=True)
 
-# Define the safe_detect function to handle empty or invalid text
+def extract_text_from_image(image_path):
+    """Extract text from an image using Tesseract."""
+    img = Image.open(image_path)
+    d = pytesseract.image_to_data(img, output_type=pytesseract.Output.DICT)
+    extracted_data = []
+    for i in range(len(d['text'])):
+        text = d['text'][i]
+        if text.strip():
+            x, y = d['left'][i], d['top'][i]
+            extracted_data.append((text, (x, y)))
+    return extracted_data
+
 def safe_detect(text):
-    if not text.strip():  # Check if text is empty or just whitespace
-        return "Unknown"  # You can return a default language or handle it differently
+    """Safely detect the language of a given text."""
+    if not text.strip():
+        return "Unknown"
     try:
         return detect(text)
     except LangDetectException:
-        return "Unknown"  # Handle the case where language detection fails
+        return "Unknown"
