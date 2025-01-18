@@ -6,12 +6,14 @@ from PIL import Image
 from langdetect import detect, LangDetectException
 import pandas as pd
 from pdf2image import convert_from_path
+from flask import Flask, render_template
 
 # Tesseract setup (update this to your local installation path)
 pytesseract.pytesseract.tesseract_cmd = r'C:\Users\Msi\Desktop\Text Extraction\tesseract OCR\tesseract.exe'
 
 # Blueprint setup
 main = Blueprint('main', __name__)
+
 
 # Allowed file extensions (image and PDF)
 ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'webp', 'heif', 'heic', 'raw', 'cr2', 'nef', 'dng', 'svg', 'eps', 'ai', 'ico', 'pdf'}

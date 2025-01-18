@@ -9,14 +9,17 @@ document.querySelector('form').addEventListener('submit', function (event) {
     })
     .then(response => response.json())
     .then(data => {
-        if (data.result) {
-            document.getElementById('output').innerText = data.result;
+        const output = document.getElementById('output');
+        if (data.download_link) {
+            output.innerHTML = `
+                <p>File processed successfully! You can <a href="${data.download_link}" download>download it now</a>.</p>
+            `;
         } else {
-            document.getElementById('output').innerText = data.error || 'Error processing the file.';
+            output.innerHTML = `<p style="color: red;">${data.error || 'Error processing the file.'}</p>`;
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        document.getElementById('output').innerText = 'An error occurred.';
+        document.getElementById('output').innerHTML = '<p style="color: red;">An error occurred.</p>';
     });
 });

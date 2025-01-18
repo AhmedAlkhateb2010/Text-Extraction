@@ -4,11 +4,117 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Text Extraction</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        /* General Reset and Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .container {
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 600px;
+            padding: 40px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 32px;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+
+        p {
+            font-size: 16px;
+            color: #7f8c8d;
+            margin-bottom: 20px;
+        }
+
+        form {
+            margin-bottom: 30px;
+        }
+
+        input[type="file"] {
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+            margin: 10px 0;
+            background-color: #fafafa;
+            width: 80%;
+            max-width: 300px;
+            font-size: 16px;
+        }
+
+        button {
+            padding: 12px 25px;
+            background-color: #3498db;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 18px;
+            width: 100%;
+            max-width: 300px;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        button:disabled {
+            background-color: #95a5a6;
+        }
+
+        #error-message {
+            color: #e74c3c;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+
+        #download-section {
+            margin-top: 20px;
+        }
+
+        #download-now-button {
+            padding: 10px 20px;
+            background-color: #2ecc71;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 18px;
+        }
+
+        #download-now-button:hover {
+            background-color: #27ae60;
+        }
+
+        #output {
+            margin-top: 20px;
+            font-size: 16px;
+            color: #333;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
-        <h1>Upload an Image or PDF for Text Extraction</h1>
+        <h1>Text Extraction</h1>
+        <p>Upload an image or PDF file for text extraction</p>
 
         <!-- Upload Form -->
         <form id="upload-form" method="POST" action="/upload" enctype="multipart/form-data">
@@ -20,7 +126,7 @@
         <!-- Error or Success Message -->
         <div id="message">
             {% if error %}
-                <p style="color: red;">{{ error }}</p>
+                <p class="error-message">{{ error }}</p>
             {% endif %}
         </div>
 
