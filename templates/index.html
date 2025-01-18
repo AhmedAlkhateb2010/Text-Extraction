@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Extraction</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Upload an Image for Text Extraction</h1>
+
+        <!-- Single form for file upload -->
+        <form action="/upload" method="POST" enctype="multipart/form-data">
+            <input type="file" name="file" accept="image/*" required>
+            <button type="submit">Upload</button>
+        </form>
+
+        <div id="output">
+            {% if download_link %}
+                <p>File successfully uploaded. <a href="{{ download_link }}" download>Download the extracted text</a></p>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>
