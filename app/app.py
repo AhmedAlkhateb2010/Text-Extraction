@@ -1,15 +1,16 @@
+# File Path: C:\Users\Msi\Desktop\Text Extraction\app\app.py
+
 from flask import Flask
-from routes import main
-
-# Initialize Flask app
-app = Flask(__name__)
-
-# Register the Blueprint
-app.register_blueprint(main)
-
-if __name__ == '__main__':
-    app.run(debug=True)
+from .routes import main
+from .config import TESSERACT_PATH
 import pytesseract
+import os
 
-# Set the path to the Tesseract executable
-pytesseract.pytesseract.tesseract_cmd = r'C:\Users\Msi\Desktop\Text Extraction\tesseract OCR\tesseract.exe'  # Update this path based on where Tesseract is installed
+# Set Tesseract environment variables
+os.environ['TESSDATA_PREFIX'] = r'C:\Users\Msi\Desktop\Text Extraction\tesseract OCR\tessdata'
+pytesseract.pytesseract.tesseract_cmd = TESSERACT_PATH
+
+def create_app():
+    app = Flask(__name__, template_folder='../templates')
+    app.register_blueprint(main)
+    return app

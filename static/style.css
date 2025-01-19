@@ -1,3 +1,5 @@
+/* File path: C:\Users\Msi\Desktop\Text Extraction\static\styles.css */
+
 /* General Reset and Base Styles */
 * {
     margin: 0;
@@ -101,4 +103,13 @@ button:disabled {
     margin-top: 20px;
     font-size: 16px;
     color: #333;
+}
+
+#output a {
+    color: #3498db;
+    text-decoration: none;
+}
+
+#output a:hover {
+    text-decoration: underline;
 }

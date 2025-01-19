@@ -1,9 +1,12 @@
+<!-- File path: C:\Users\Msi\Desktop\Text Extraction\templates\index.html -->
 <!doctype html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Text Extraction</title>
+    
     <style>
         /* General Reset and Base Styles */
         * {
@@ -109,8 +112,18 @@
             font-size: 16px;
             color: #333;
         }
+
+        #output a {
+            color: #3498db;
+            text-decoration: none;
+        }
+
+        #output a:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
+
 <body>
     <div class="container">
         <h1>Text Extraction</h1>
@@ -124,38 +137,61 @@
         </form>
 
         <!-- Error or Success Message -->
-        <div id="message">
+        <div id="output">
             {% if error %}
-                <p class="error-message">{{ error }}</p>
+                <p id="error-message">{{ error }}</p>
+            {% endif %}
+
+            {% if download_link %}
+                <p>File processed successfully! You can <a href="{{ download_link }}" download>download it now</a>.</p>
             {% endif %}
         </div>
-
-        <!-- Download Section -->
-        {% if download_link %}
-        <div id="download-section">
-            <p>File processed successfully! You can download it now:</p>
-            <a href="{{ download_link }}" id="download-now-button" download>Download Now</a>
-        </div>
-
-        <!-- Auto-Trigger Download -->
-        <script type="text/javascript">
-            window.onload = function() {
-                var downloadLink = document.getElementById("download-now-button");
-                if (downloadLink) {
-                    downloadLink.click(); // Automatically trigger the download
-                }
-            };
-        </script>
-        {% endif %}
     </div>
 
-    <!-- Loading Spinner -->
+    <!-- JavaScript for Form Submission Handling -->
     <script type="text/javascript">
-        document.getElementById("upload-form").onsubmit = function() {
-            var convertButton = document.getElementById("convert-button");
-            convertButton.innerText = "Processing...";
-            convertButton.disabled = true; // Disable the button to prevent duplicate submissions
-        };
+        document.querySelector('form').addEventListener('submit', function (event) {
+            event.preventDefault();
+            
+            const formData = new FormData(this);
+
+            // Change button text and disable it while processing
+            const convertButton = document.getElementById('convert-button');
+            convertButton.innerText = 'Processing...';
+            convertButton.disabled = true;
+
+            // Send the file to the server
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                const output = document.getElementById('output');
+                if (data.download_link) {
+                    // Display download link on success
+                    output.innerHTML = `
+                        <p>File processed successfully! You can <a href="${data.download_link}" download>download it now</a>.</p>
+                    `;
+                } else {
+                    // Show error message if processing failed
+                    output.innerHTML = `<p style="color: red;">${data.error || 'Error processing the file.'}</p>`;
+                }
+                
+                // Reset the button
+                convertButton.innerText = 'Convert to Text';
+                convertButton.disabled = false;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('output').innerHTML = '<p style="color: red;">An error occurred.</p>';
+                
+                // Reset the button
+                convertButton.innerText = 'Convert to Text';
+                convertButton.disabled = false;
+            });
+        });
     </script>
 </body>
+
 </html>

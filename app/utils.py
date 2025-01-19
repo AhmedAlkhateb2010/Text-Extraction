@@ -1,50 +1,30 @@
+#File Path: C:\Users\Msi\Desktop\Text Extraction\app\utils.py
+
+from PIL import Image, ImageEnhance, ImageFilter
 import pytesseract
-from PIL import Image
-from langdetect import detect
-import os
-import pandas as pd
+from langdetect import detect, LangDetectException
+from .config import TESSERACT_PATH
 
-def process_file(file_path):
-    # Open the image for text extraction
-    img = Image.open(file_path)
+# Preprocess the image for better OCR performance
+def preprocess_image(image_path):
+    img = Image.open(image_path).convert('L')  # Convert to grayscale
+    img = ImageEnhance.Contrast(img).enhance(2)  # Increase contrast
+    img = img.filter(ImageFilter.MedianFilter())  # Apply median filter
+    return img
 
-    # Extract text and coordinates with pytesseract
-    d = pytesseract.image_to_data(img, output_type=pytesseract.Output.DICT)
-    extracted_data = []
-    for i in range(len(d['text'])):
-        text = d['text'][i]
-        if text.strip():  # Ignore empty strings
-            x = d['left'][i]
-            y = d['top'][i]
-            extracted_data.append((text, (x, y)))
-    
-    # Prepare data for Excel creation
-    text_column = []
-    language_column = []
-    word_count_column = []
-    character_count_column = []
-    coordinates_column = []
+# Detect the language of the given text
+def detect_language(text):
+    try:
+        return detect(text)
+    except LangDetectException:
+        return "unknown"
 
-    for line_text, coordinates in extracted_data:
-        text_column.append(line_text)
-        language_column.append(detect(line_text))  # Detect language
-        word_count_column.append(len(line_text.split()))  # Word count
-        character_count_column.append(len(line_text))  # Character count
-        coordinates_column.append(f"({coordinates[0]}, {coordinates[1]})")  # Coordinates
-    
-    return text_column, language_column, word_count_column, character_count_column, coordinates_column
-
-def save_to_excel(output_filename, text_column, language_column, word_count_column, character_count_column, coordinates_column):
-    # Create a DataFrame for the extracted data
-    df = pd.DataFrame({
-        "Text": text_column,
-        "Language": language_column,
-        "Word Count": word_count_column,
-        "Character Count": character_count_column,
-        "Coordinates": coordinates_column
-    })
-    
-    # Save DataFrame to Excel
-    output_filepath = os.path.join(r'C:\Users\Msi\Desktop\Text Extraction\app\uploads', output_filename)  # Raw string for file path
-    df.to_excel(output_filepath, index=False, engine='openpyxl')
-    return output_filepath
+# Extract text from an image
+def extract_text_from_image(image_path):
+    try:
+        img = preprocess_image(image_path)
+        text = pytesseract.image_to_string(img)
+        return text
+    except Exception as e:
+        print(f"Error extracting text: {e}")
+        return ""
